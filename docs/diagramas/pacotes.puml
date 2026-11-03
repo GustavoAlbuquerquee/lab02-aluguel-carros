@@ -1,0 +1,100 @@
+@startuml pacotes
+title Diagrama de Pacotes - Visão Lógica (Sistema de Aluguel de Carros)
+skinparam packageStyle folder
+left to right direction
+
+package "Subsistema: Construção dinâmica das páginas web\n(frontend - React + Vite)" as FE {
+  package "app (src)" as fe_app {
+    [main.jsx]
+    [App.jsx]
+  }
+  package "pages" as fe_pages {
+    [Login]
+    [Cadastro]
+    [Pedidos]
+    [Clientes]
+    [Automoveis]
+    [Perfil] as fe_perfil
+  }
+  package "components" as fe_components {
+    [ClienteForm]
+    [ui]
+  }
+  package "api (src)" as fe_api {
+    [api.js]
+    [util.js]
+  }
+}
+
+package "Subsistema: Gestão de pedidos e contratos\n(backend - Spring Boot, br.pucminas.aluguel)" as BE {
+  [AluguelApplication]
+  package "controller" as be_controller <<Controller>> {
+    [ClienteController]
+    [PedidoController]
+    [GlobalExceptionHandler]
+  }
+  package "service" as be_service {
+    [UsuarioService]
+    [ClienteService]
+    [AutomovelService]
+    [PedidoService]
+  }
+  package "repository" as be_repository {
+    [UsuarioRepository]
+    [ClienteRepository]
+    [AgenteRepository]
+    [AutomovelRepository]
+    [PedidoRepository]
+    [ContratoRepository]
+  }
+  package "model" as be_model <<Model>> {
+    [Usuario]
+    [Cliente]
+    [Agente]
+    [Rendimento]
+    [Automovel]
+    [Pedido]
+    [Contrato]
+    [ContratoCredito]
+    [Perfil] as m_perfil
+    [TipoAgente]
+    [StatusPedido]
+    [TipoProprietario]
+  }
+  package "dto" as be_dto {
+    [PedidoRequest]
+    [AvaliacaoRequest]
+    [ContratoRequest]
+  }
+  package "config" as be_config {
+    [SecurityConfig]
+    [DataLoader]
+  }
+}
+
+database "Supabase\n(PostgreSQL)" as DB
+
+fe_app ..> fe_pages : <<use>>
+fe_app ..> fe_api : <<use>>
+fe_pages ..> fe_components : <<use>>
+fe_pages ..> fe_api : <<use>>
+fe_components ..> fe_api : <<use>>
+fe_api ..> be_controller : HTTP/JSON\n(REST + Basic Auth)
+
+be_controller ..> be_service : <<use>>
+be_controller ..> be_dto : <<use>>
+be_controller ..> be_model : <<use>>
+be_service ..> be_repository : <<use>>
+be_service ..> be_dto : <<use>>
+be_service ..> be_model : <<use>>
+be_repository ..> be_model : <<use>>
+be_dto ..> be_model : <<use>>
+be_config ..> be_repository : <<use>>
+be_config ..> be_model : <<use>>
+be_repository ..> DB : JPA/Hibernate\n(JDBC)
+
+note bottom of DB
+  Sem as variáveis SUPABASE_DB_*,
+  a aplicação usa H2 em memória
+end note
+@enduml

@@ -27,6 +27,12 @@ public class AutomovelService {
     }
 
     public Automovel criar(Automovel automovel) {
+        if (automovelRepository.existsByMatricula(automovel.getMatricula())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Matrícula já cadastrada");
+        }
+        if (automovelRepository.existsByPlaca(automovel.getPlaca())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Placa já cadastrada");
+        }
         automovel.setId(null);
         return automovelRepository.save(automovel);
     }

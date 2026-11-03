@@ -1,5 +1,6 @@
 package br.pucminas.aluguel.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -34,6 +35,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/pedidos").hasRole("CLIENTE")
                         .requestMatchers("/api/pedidos/*/cancelar").hasRole("CLIENTE")
                         .anyRequest().authenticated())
+                .exceptionHandling(ex -> ex.accessDeniedHandler(
+                        (req, res, e) -> res.sendError(403, "Acesso negado")))
                 .httpBasic(basic -> basic.authenticationEntryPoint(
                         (req, res, e) -> res.sendError(401, "Usuário ou senha inválidos")));
         return http.build();
@@ -45,9 +48,10 @@ public class SecurityConfig {
     }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${app.cors.allowed-origins:http://localhost:5173}") String[] origens) {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowedOrigins(List.of(origens));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

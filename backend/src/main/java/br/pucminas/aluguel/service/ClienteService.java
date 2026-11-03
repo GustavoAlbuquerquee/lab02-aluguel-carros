@@ -2,6 +2,7 @@ package br.pucminas.aluguel.service;
 
 import br.pucminas.aluguel.model.Cliente;
 import br.pucminas.aluguel.model.Perfil;
+import br.pucminas.aluguel.model.Rendimento;
 import br.pucminas.aluguel.model.Usuario;
 import br.pucminas.aluguel.repository.ClienteRepository;
 import br.pucminas.aluguel.repository.PedidoRepository;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -37,6 +39,7 @@ public class ClienteService {
         }
         cliente.setId(null);
         cliente.setSenha(passwordEncoder.encode(cliente.getSenha()));
+        cliente.setRendimentos(copiarRendimentos(cliente.getRendimentos()));
         return clienteRepository.save(cliente);
     }
 
@@ -66,7 +69,7 @@ public class ClienteService {
         cliente.setEndereco(dados.getEndereco());
         cliente.setProfissao(dados.getProfissao());
         cliente.getRendimentos().clear();
-        cliente.getRendimentos().addAll(dados.getRendimentos());
+        cliente.getRendimentos().addAll(copiarRendimentos(dados.getRendimentos()));
         if (dados.getSenha() != null && !dados.getSenha().isBlank()) {
             cliente.setSenha(passwordEncoder.encode(dados.getSenha()));
         }
@@ -80,6 +83,20 @@ public class ClienteService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Cliente possui pedidos e não pode ser excluído");
         }
         clienteRepository.delete(cliente);
+    }
+
+    private List<Rendimento> copiarRendimentos(List<Rendimento> origem) {
+        List<Rendimento> copia = new ArrayList<>();
+        if (origem == null) {
+            return copia;
+        }
+        for (Rendimento r : origem) {
+            Rendimento novo = new Rendimento();
+            novo.setEntidadeEmpregadora(r.getEntidadeEmpregadora());
+            novo.setValor(r.getValor());
+            copia.add(novo);
+        }
+        return copia;
     }
 
     private void verificarAcesso(Long id, Usuario solicitante) {

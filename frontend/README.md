@@ -1,12 +1,49 @@
-# React + Vite
+# Frontend - Aluguel de Carros
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interface web em React + Vite do sistema de aluguel de carros (LAB02).
 
-Currently, two official plugins are available:
+## Execução
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+```bash
+cp .env.example .env
+npm install
+npm run dev
+```
 
-## Expanding the ESLint configuration
+A aplicação abre em `http://localhost:5173` e consome a API definida em `VITE_API_URL` (padrão `http://localhost:8080`).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Scripts
+
+| Comando | Descrição |
+| --- | --- |
+| `npm run dev` | Servidor de desenvolvimento |
+| `npm run build` | Build de produção em `dist/` |
+| `npm run preview` | Serve o build de produção |
+| `npm run lint` | Verificação com ESLint |
+
+## Estrutura
+
+```
+src/
+  api.js                 cliente HTTP (fetch + autenticação Basic)
+  util.js                formatação e rótulos
+  App.jsx                sessão e navegação por perfil
+  components/
+    ui.jsx               modal, alertas, badges, estados de carregamento
+    ClienteForm.jsx      formulário de cliente com até 3 rendimentos
+  pages/
+    Login.jsx            autenticação
+    Cadastro.jsx         cadastro público de cliente
+    Pedidos.jsx          pedidos, avaliação e contratos
+    Clientes.jsx         CRUD de clientes (agentes)
+    Automoveis.jsx       frota de automóveis
+    Perfil.jsx           edição e exclusão do próprio cadastro
+```
+
+## Contas de demonstração
+
+| Usuário | Senha | Perfil |
+| --- | --- | --- |
+| cliente | 123456 | Cliente |
+| empresa | 123456 | Agente (empresa) |
+| banco | 123456 | Agente (banco) |

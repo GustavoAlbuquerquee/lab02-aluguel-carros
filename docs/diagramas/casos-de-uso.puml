@@ -1,0 +1,71 @@
+@startuml casos-de-uso
+title Diagrama de Casos de Uso - Sistema de Aluguel de Carros
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+
+actor "Usuário" as Usuario
+actor "Cliente" as Cliente
+actor "Agente" as Agente
+actor "Empresa" as Empresa
+actor "Banco" as Banco
+
+Usuario <|-- Cliente
+Usuario <|-- Agente
+Agente <|-- Empresa
+Agente <|-- Banco
+
+rectangle "Sistema de Aluguel de Carros" {
+  usecase "Realizar login" as UC01
+  usecase "Cadastrar-se" as UC02
+  usecase "Manter cadastro\n(consultar, alterar, excluir)" as UC03
+  usecase "Informar rendimentos\n(máx. 3)" as UC04
+  usecase "Introduzir pedido" as UC05
+  usecase "Consultar pedido" as UC06
+  usecase "Modificar pedido" as UC07
+  usecase "Cancelar pedido" as UC08
+  usecase "Avaliar pedido" as UC09
+  usecase "Executar contrato" as UC10
+  usecase "Registrar propriedade\ndo automóvel" as UC11
+  usecase "Conceder crédito" as UC12
+  usecase "Cadastrar automóvel" as UC13
+  usecase "Consultar clientes" as UC14
+  usecase "Consultar automóveis" as UC15
+}
+
+Usuario --> UC01
+Usuario --> UC02
+
+Cliente --> UC03
+Cliente --> UC05
+Cliente --> UC06
+Cliente --> UC07
+Cliente --> UC08
+Cliente --> UC15
+
+Agente --> UC03
+Agente --> UC06
+Agente --> UC07
+Agente --> UC09
+Agente --> UC10
+Agente --> UC13
+Agente --> UC14
+Agente --> UC15
+
+Banco --> UC12
+
+UC02 ..> UC04 : <<include>>
+UC03 ..> UC04 : <<include>>
+UC10 ..> UC11 : <<include>>
+UC12 ..> UC10 : <<extend>>
+
+note right of UC10
+  Somente pedidos APROVADOS
+  (parecer financeiro positivo)
+end note
+
+note right of UC12
+  Exclusivo de agentes
+  do tipo BANCO
+end note
+@enduml

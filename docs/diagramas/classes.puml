@@ -1,0 +1,305 @@
+@startuml classes
+title Diagrama de Classes - Modelo de Domínio (br.pucminas.aluguel.model)
+skinparam classAttributeIconSize 0
+skinparam linetype ortho
+hide empty members
+
+abstract class Usuario <<Entity>> {
+  - id : Long
+  - login : String {unique}
+  - senha : String {writeOnly}
+  - nome : String
+  + {abstract} getPerfil() : Perfil
+}
+
+class Cliente <<Entity>> {
+  - rg : String
+  - cpf : String {unique}
+  - endereco : String
+  - profissao : String
+  - rendimentos : List<Rendimento> {size <= 3}
+  + getPerfil() : Perfil
+}
+
+class Agente <<Entity>> {
+  - cnpj : String {unique}
+  - tipo : TipoAgente
+  + getPerfil() : Perfil
+}
+
+class Rendimento <<Entity>> {
+  - id : Long
+  - entidadeEmpregadora : String
+  - valor : BigDecimal
+}
+
+class Automovel <<Entity>> {
+  - id : Long
+  - matricula : String {unique}
+  - ano : Integer
+  - marca : String
+  - modelo : String
+  - placa : String {unique}
+}
+
+class Pedido <<Entity>> {
+  - id : Long
+  - cliente : Cliente
+  - automovel : Automovel
+  - dataInicio : LocalDate
+  - dataFim : LocalDate
+  - status : StatusPedido = PENDENTE
+  - parecer : String
+  - agenteAvaliador : Agente
+  - dataCriacao : LocalDateTime = now()
+}
+
+class Contrato <<Entity>> {
+  - id : Long
+  - pedido : Pedido
+  - tipoProprietario : TipoProprietario
+  - valor : BigDecimal
+  - dataAssinatura : LocalDate = now()
+  - contratoCredito : ContratoCredito
+}
+
+class ContratoCredito <<Entity>> {
+  - id : Long
+  - banco : Agente
+  - valor : BigDecimal
+  - taxaJuros : BigDecimal
+  - parcelas : Integer
+}
+
+enum Perfil {
+  CLIENTE
+  AGENTE
+}
+
+enum TipoAgente {
+  EMPRESA
+  BANCO
+}
+
+enum StatusPedido {
+  PENDENTE
+  APROVADO
+  REPROVADO
+  CANCELADO
+  CONTRATADO
+}
+
+enum TipoProprietario {
+  CLIENTE
+  EMPRESA
+  BANCO
+}
+
+Usuario <|-- Cliente
+Usuario <|-- Agente
+Usuario ..> Perfil
+
+Cliente "1" *--> "0..3" Rendimento : rendimentos
+Pedido "*" --> "1" Cliente : cliente
+Pedido "*" --> "1" Automovel : automovel
+Pedido "*" --> "0..1" Agente : agenteAvaliador
+Pedido --> StatusPedido
+Contrato "0..1" --> "1" Pedido : pedido
+Contrato "1" *--> "0..1" ContratoCredito : contratoCredito
+Contrato --> TipoProprietario
+ContratoCredito "*" --> "1" Agente : banco
+Agente --> TipoAgente
+
+note bottom of Usuario
+  Herança JPA JOINED:
+  tabelas usuario, cliente e agente
+end note
+
+note bottom of ContratoCredito
+  Concedido apenas por
+  Agente com tipo = BANCO
+end note
+@enduml
+
+@startuml classes-camadas
+title Diagrama de Classes - Camadas MVC (controller, service, repository, dto, config)
+skinparam classAttributeIconSize 0
+hide empty members
+
+package controller {
+  class ClienteController <<RestController>> {
+    + me(auth : Authentication) : Usuario
+    + criar(cliente : Cliente) : Cliente
+    + listar() : List<Cliente>
+    + buscar(id : Long, auth : Authentication) : Cliente
+    + atualizar(id : Long, cliente : Cliente, auth : Authentication) : Cliente
+    + excluir(id : Long, auth : Authentication) : void
+  }
+  class PedidoController <<RestController>> {
+    + automoveis() : List<Automovel>
+    + criarAutomovel(automovel : Automovel) : Automovel
+    + listar(auth : Authentication) : List<Pedido>
+    + buscar(id : Long, auth : Authentication) : Pedido
+    + criar(req : PedidoRequest, auth : Authentication) : Pedido
+    + modificar(id : Long, req : PedidoRequest, auth : Authentication) : Pedido
+    + cancelar(id : Long, auth : Authentication) : Pedido
+    + avaliar(id : Long, req : AvaliacaoRequest, auth : Authentication) : Pedido
+    + contratar(id : Long, req : ContratoRequest, auth : Authentication) : Contrato
+    + contrato(id : Long, auth : Authentication) : Contrato
+  }
+  class GlobalExceptionHandler <<RestControllerAdvice>> {
+    + status(ex : ResponseStatusException, req : HttpServletRequest) : ResponseEntity<Map<String, Object>>
+    + validacao(ex : MethodArgumentNotValidException, req : HttpServletRequest) : ResponseEntity<Map<String, Object>>
+    + corpoInvalido(ex : HttpMessageNotReadableException, req : HttpServletRequest) : ResponseEntity<Map<String, Object>>
+    + integridade(ex : DataIntegrityViolationException, req : HttpServletRequest) : ResponseEntity<Map<String, Object>>
+    - formatar(erro : FieldError) : String
+    - corpo(status : HttpStatus, mensagem : String, req : HttpServletRequest) : ResponseEntity<Map<String, Object>>
+  }
+}
+
+class AluguelApplication <<SpringBootApplication>> {
+  + {static} main(args : String[]) : void
+}
+
+package service {
+  class UsuarioService <<Service>> {
+    + loadUserByUsername(login : String) : UserDetails
+    + atual(auth : Authentication) : Usuario
+  }
+  class ClienteService <<Service>> {
+    + criar(cliente : Cliente) : Cliente
+    + listar() : List<Cliente>
+    + buscar(id : Long, solicitante : Usuario) : Cliente
+    + atualizar(id : Long, dados : Cliente, solicitante : Usuario) : Cliente
+    + excluir(id : Long, solicitante : Usuario) : void
+    - copiarRendimentos(origem : List<Rendimento>) : List<Rendimento>
+    - verificarAcesso(id : Long, solicitante : Usuario) : void
+  }
+  class AutomovelService <<Service>> {
+    + listar() : List<Automovel>
+    + buscar(id : Long) : Automovel
+    + criar(automovel : Automovel) : Automovel
+    + atualizar(id : Long, dados : Automovel) : Automovel
+    + excluir(id : Long) : void
+  }
+  class PedidoService <<Service>> {
+    + listar(usuario : Usuario) : List<Pedido>
+    + buscar(id : Long, usuario : Usuario) : Pedido
+    + criar(req : PedidoRequest, usuario : Usuario) : Pedido
+    + modificar(id : Long, req : PedidoRequest, usuario : Usuario) : Pedido
+    + cancelar(id : Long, usuario : Usuario) : Pedido
+    + avaliar(id : Long, req : AvaliacaoRequest, usuario : Usuario) : Pedido
+    + contratar(id : Long, req : ContratoRequest, usuario : Usuario) : Contrato
+    + buscarContrato(id : Long, usuario : Usuario) : Contrato
+    - validarCredito(req : ContratoRequest) : void
+    - preencher(pedido : Pedido, req : PedidoRequest) : void
+  }
+  interface UserDetailsService
+}
+
+package repository {
+  interface "JpaRepository<T, ID>" as JpaRepository <<Spring Data>>
+  interface UsuarioRepository {
+    + findByLogin(login : String) : Optional<Usuario>
+    + existsByLogin(login : String) : boolean
+  }
+  interface ClienteRepository {
+    + existsByCpf(cpf : String) : boolean
+  }
+  interface AgenteRepository
+  interface AutomovelRepository {
+    + existsByMatricula(matricula : String) : boolean
+    + existsByPlaca(placa : String) : boolean
+  }
+  interface PedidoRepository {
+    + findByClienteIdOrderByIdDesc(clienteId : Long) : List<Pedido>
+    + findAllByOrderByIdDesc() : List<Pedido>
+    + existsByClienteId(clienteId : Long) : boolean
+    + existsByAutomovelId(automovelId : Long) : boolean
+  }
+  interface ContratoRepository {
+    + findByPedidoId(pedidoId : Long) : Optional<Contrato>
+  }
+}
+
+package dto {
+  class PedidoRequest <<record>> {
+    + automovelId : Long
+    + dataInicio : LocalDate
+    + dataFim : LocalDate
+  }
+  class AvaliacaoRequest <<record>> {
+    + aprovado : Boolean
+    + parecer : String
+  }
+  class ContratoRequest <<record>> {
+    + tipoProprietario : TipoProprietario
+    + valor : BigDecimal
+    + credito : boolean
+    + valorCredito : BigDecimal
+    + taxaJuros : BigDecimal
+    + parcelas : Integer
+  }
+}
+
+package config {
+  class SecurityConfig <<Configuration>> {
+    + filterChain(http : HttpSecurity) : SecurityFilterChain
+    + passwordEncoder() : PasswordEncoder
+    + corsConfigurationSource() : CorsConfigurationSource
+  }
+  class DataLoader <<Component>> {
+    - {static} SENHA_PADRAO : String = "123456"
+    + run(args : String...) : void
+    - criarCliente() : Cliente
+    - criarRendimento(entidade : String, valor : BigDecimal) : Rendimento
+    - criarAgente(login : String, nome : String, cnpj : String, tipo : TipoAgente) : Agente
+    - criarAutomovel(matricula : String, ano : int, marca : String, modelo : String, placa : String) : Automovel
+  }
+  interface CommandLineRunner
+}
+
+UserDetailsService <|.. UsuarioService
+CommandLineRunner <|.. DataLoader
+JpaRepository <|-- UsuarioRepository : "T = Usuario, ID = Long"
+JpaRepository <|-- ClienteRepository : "T = Cliente, ID = Long"
+JpaRepository <|-- AgenteRepository : "T = Agente, ID = Long"
+JpaRepository <|-- AutomovelRepository : "T = Automovel, ID = Long"
+JpaRepository <|-- PedidoRepository : "T = Pedido, ID = Long"
+JpaRepository <|-- ContratoRepository : "T = Contrato, ID = Long"
+
+ClienteController --> ClienteService
+ClienteController --> UsuarioService
+PedidoController --> PedidoService
+PedidoController --> AutomovelService
+PedidoController --> UsuarioService
+PedidoController ..> PedidoRequest
+PedidoController ..> AvaliacaoRequest
+PedidoController ..> ContratoRequest
+
+UsuarioService --> UsuarioRepository
+ClienteService --> ClienteRepository
+ClienteService --> UsuarioRepository
+ClienteService --> PedidoRepository
+AutomovelService --> AutomovelRepository
+AutomovelService --> PedidoRepository
+PedidoService --> PedidoRepository
+PedidoService --> ContratoRepository
+PedidoService --> AutomovelService
+
+ClienteService ..> SecurityConfig : usa PasswordEncoder
+DataLoader ..> UsuarioRepository
+DataLoader ..> AutomovelRepository
+DataLoader ..> SecurityConfig : usa PasswordEncoder
+
+note bottom of AutomovelService
+  atualizar() e excluir() existem no serviço,
+  mas não são expostos por endpoint REST
+  (a API oferece apenas GET e POST /api/automoveis)
+end note
+
+note bottom of GlobalExceptionHandler
+  Converte exceções em JSON
+  {timestamp, status, error, message, path}
+end note
+@enduml

@@ -104,6 +104,7 @@ public class PedidoService {
             if (agente.getTipo() != TipoAgente.BANCO) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Contrato de crédito só pode ser concedido por um banco");
             }
+            validarCredito(req);
             ContratoCredito credito = new ContratoCredito();
             credito.setBanco(agente);
             credito.setValor(req.valorCredito() != null ? req.valorCredito() : req.valor());
@@ -120,6 +121,18 @@ public class PedidoService {
         buscar(id, usuario);
         return contratoRepository.findByPedidoId(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Pedido sem contrato"));
+    }
+
+    private void validarCredito(ContratoRequest req) {
+        if (req.valorCredito() != null && req.valorCredito().signum() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Valor do crédito deve ser maior que zero");
+        }
+        if (req.taxaJuros() == null || req.taxaJuros().signum() < 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Taxa de juros deve ser informada e não pode ser negativa");
+        }
+        if (req.parcelas() == null || req.parcelas() < 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Número de parcelas deve ser no mínimo 1");
+        }
     }
 
     private void preencher(Pedido pedido, PedidoRequest req) {
